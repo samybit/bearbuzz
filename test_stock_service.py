@@ -15,7 +15,7 @@ class TestStockAlertService(unittest.TestCase):
         # Manually inject fake keys so tests don't rely on your actual .env file
         self.service.stock_api_key = "FAKE_STOCK_KEY"
         self.service.news_api_key = "FAKE_NEWS_KEY"
-        self.service.twilio_sid = "FAKE_SID"
+        self.service.twilio_account_sid = "FAKE_SID"
         self.service.twilio_token = "FAKE_TOKEN"
         self.service.twilio_from = "+1234567890"
         self.service.twilio_to = "+0987654321"
