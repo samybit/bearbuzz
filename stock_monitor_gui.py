@@ -380,8 +380,10 @@ def main():
         )
         return
 
-    # Configure output encoding for Chinese characters/Emojis
-    sys.stdout.reconfigure(encoding="utf-8")
+    # Configure output encoding only if a console is attached
+    # fixes Chinese characters/Emojis
+    if sys.stdout is not None:
+        sys.stdout.reconfigure(encoding="utf-8")
 
     root = tk.Tk()
     StockMonitorGUI(root)
