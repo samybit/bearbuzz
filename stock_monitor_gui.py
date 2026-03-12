@@ -227,7 +227,7 @@ class StockMonitorGUI:
                 # Send SMS messages (original logic)
                 self.log_message("Sending SMS notifications...")
                 client = Client(
-                    os.environ.get("TWILIO_SID"), os.environ.get("TWILIO_AUTH_TOKEN")
+                    os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN")
                 )
 
                 for i, article in enumerate(formatted_articles, 1):
@@ -282,7 +282,7 @@ def main():
     required_vars = [
         "STOCK_API_KEY",
         "NEWS_API_KEY",
-        "TWILIO_SID",
+        "TWILIO_ACCOUNT_SID",
         "TWILIO_AUTH_TOKEN",
         "TWILIO_PHONE_NUMBER",
         "MY_PHONE_NUMBER",

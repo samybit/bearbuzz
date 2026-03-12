@@ -2,8 +2,19 @@ import os
 import sys
 
 import requests
-from dotenv import load_dotenv
 from twilio.rest import Client
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+# --- Environment Variables ---
+STOCK_API_KEY = os.environ.get("STOCK_API_KEY")
+NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
+MY_PHONE_NUMBER = os.environ.get("MY_PHONE_NUMBER")
 
 # --- Configuration ---
 STOCK_NAME = "TSLA"
@@ -12,19 +23,10 @@ STOCK_ENDPOINT = "https://www.alphavantage.co/query"
 NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 ARTICLES_LIMIT = 3
 
-# --- Environment Variables ---
-STOCK_API_KEY = os.environ.get("STOCK_API_KEY")
-NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
-TWILIO_SID = os.environ.get("TWILIO_SID")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
-MY_PHONE_NUMBER = os.environ.get("MY_PHONE_NUMBER")
-
-load_dotenv()
-
 # fixes output encoding chinese characters
 sys.stdout.reconfigure(encoding="utf-8")
 
+# --- Core functionality ---
 stock_params = {
     "function": "TIME_SERIES_DAILY",
     "symbol": STOCK_NAME,
@@ -63,7 +65,7 @@ if abs(difference_percent) > 5:
         for article in three_articles
     ]
 
-    client = Client(TWILIO_SID, TWILIO_AUTH_TOKEN)
+    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     for article in formatted_articles:
         message = client.messages.create(
             body=article,
