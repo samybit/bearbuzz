@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+venv/
+env/
+.venv/
+
+# Environment Variables (Crucial for security)
+.env
+
+# IDEs and Editors
+.vscode/
+.idea/
+
+# Testing
+.pytest_cache/
