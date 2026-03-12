@@ -12,8 +12,10 @@ STOCK_ENDPOINT = "https://www.alphavantage.co/query"
 NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 ARTICLES_LIMIT = 3
 
-load_dotenv()  # loads the .env file
-sys.stdout.reconfigure(encoding='utf-8')  # fixes output encoding chinese characters
+load_dotenv()
+
+# fixes output encoding chinese characters
+sys.stdout.reconfigure(encoding="utf-8")
 
 stock_params = {
     "function": "TIME_SERIES_DAILY",
@@ -47,15 +49,18 @@ if abs(difference_percent) > 5:
     news_response.raise_for_status()
     articles = news_response.json()["articles"]
     three_articles = articles[:ARTICLES_LIMIT]
-    
-    formatted_articles = [f"{STOCK_NAME}: {up_down}{difference_percent}% \nHeadline: {article['title']} \nBrief: {article['description']}" for article in three_articles]
+
+    formatted_articles = [
+        f"{STOCK_NAME}: {up_down}{difference_percent}% \nHeadline: {article['title']} \nBrief: {article['description']}"
+        for article in three_articles
+    ]
 
     client = Client(os.environ.get("TWILIO_SID"), os.environ.get("TWILIO_AUTH_TOKEN"))
     for article in formatted_articles:
         message = client.messages.create(
             body=article,
             from_=os.environ.get("TWILIO_PHONE_NUMBER"),
-            to=os.environ.get("MY_PHONE_NUMBER")
+            to=os.environ.get("MY_PHONE_NUMBER"),
         )
         print(message.sid)
         print(message.status)
