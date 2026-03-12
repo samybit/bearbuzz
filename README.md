@@ -6,6 +6,12 @@ It features both a lightweight Command Line Interface (CLI) and a fully featured
 
 ---
 
+## Screenshot
+
+![demo](assets/screenshot.png)
+
+---
+
 ### Features
 - **Dual Interfaces:** Run seamlessly via the terminal (`main.py`) or the interactive desktop GUI (`stock_monitor_gui.py`).
 - **Separation of Concerns:** Core API and communication logic is isolated in `stock_service.py` for easy testing and maintenance.
