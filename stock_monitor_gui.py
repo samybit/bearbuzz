@@ -3,10 +3,10 @@ import sys
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 import threading
-import requests
 from dotenv import load_dotenv
-from twilio.rest import Client
-from datetime import datetime
+
+# Import our new business logic service
+from stock_service import StockAlertService
 
 
 class StockMonitorGUI:
@@ -16,18 +16,11 @@ class StockMonitorGUI:
         self.root.geometry("600x700")
         self.root.resizable(True, True)
 
-        # Load environment variables
-        load_dotenv()
-
         # Configuration variables
         self.stock_name = tk.StringVar(value="TSLA")
         self.company_name = tk.StringVar(value="Tesla Inc")
         self.threshold = tk.DoubleVar(value=5.0)
         self.articles_limit = tk.IntVar(value=3)
-
-        # API endpoints
-        self.STOCK_ENDPOINT = "https://www.alphavantage.co/query"
-        self.NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
 
         self.setup_ui()
 
@@ -137,6 +130,10 @@ class StockMonitorGUI:
 
     def log_message(self, message):
         """Add a timestamped message to the log"""
+        # We import datetime locally here to keep the global namespace clean if desired,
+        # or you can add `from datetime import datetime` to the top.
+        from datetime import datetime
+
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.log_text.insert(tk.END, f"[{timestamp}] {message}\n")
         self.log_text.see(tk.END)
@@ -153,121 +150,61 @@ class StockMonitorGUI:
         thread.start()
 
     def check_stock_price(self):
-        """Core functionality from the original script"""
+        """Delegates business logic to the StockAlertService"""
         try:
             self.status_label.config(text="Checking stock price...")
             self.log_message(f"Starting stock check for {self.stock_name.get()}")
 
-            # Prepare stock API parameters
-            stock_params = {
-                "function": "TIME_SERIES_DAILY",
-                "symbol": self.stock_name.get(),
-                "apikey": os.environ.get("STOCK_API_KEY"),
-            }
+            # Initialize the service with current GUI values
+            service = StockAlertService(
+                stock_symbol=self.stock_name.get(),
+                company_name=self.company_name.get(),
+                threshold=self.threshold.get(),
+                articles_limit=self.articles_limit.get(),
+            )
 
-            # Get stock data
+            # 1. Fetch Price Data
             self.log_message("Fetching stock data from Alpha Vantage...")
-            response = requests.get(self.STOCK_ENDPOINT, params=stock_params)
-            response.raise_for_status()
+            diff_percent, trend, current_price = service.check_price_change()
 
-            data = response.json()
-
-            if "Error Message" in data:
-                raise Exception(f"Stock API Error: {data['Error Message']}")
-            if "Note" in data:
-                raise Exception(f"Stock API Limit: {data['Note']}")
-
-            time_series = data["Time Series (Daily)"]
-            data_list = [value for (key, value) in time_series.items()]
-
-            # Calculate price difference (original logic)
-            yesterday_data = data_list[0]
-            yesterday_closing_price = yesterday_data["4. close"]
-
-            day_before_yesterday_data = data_list[1]
-            day_before_yesterday_closing_price = day_before_yesterday_data["4. close"]
-
-            difference = float(yesterday_closing_price) - float(
-                day_before_yesterday_closing_price
-            )
-            up_down = "🔺" if difference > 0 else "🔻"
-
-            difference_percent = round(
-                (difference / float(yesterday_closing_price)) * 100, 2
-            )
-
-            # Update price display
-            price_text = f"{self.stock_name.get()}: {up_down} {abs(difference_percent)}% (${yesterday_closing_price})"
+            # Update GUI Price Display
+            price_text = f"{self.stock_name.get()}: {trend} {abs(diff_percent)}% (${current_price})"
             self.price_info.config(text=price_text)
+            self.log_message(f"Price change: {trend} {abs(diff_percent)}%")
 
-            self.log_message(f"Price change: {difference_percent}% (${difference:.2f})")
-
-            # Check if threshold is met
-            if abs(difference_percent) > self.threshold.get():
-                self.log_message("Threshold exceeded! Getting news articles...")
+            # 2. Check Threshold & Process Alerts
+            if abs(diff_percent) > self.threshold.get():
+                self.log_message(
+                    f"Threshold of {self.threshold.get()}% exceeded! Getting news articles..."
+                )
                 self.status_label.config(text="Threshold exceeded - fetching news...")
 
-                # Get news articles
-                news_params = {
-                    "apiKey": os.environ.get("NEWS_API_KEY"),
-                    "q": self.company_name.get(),
-                }
+                articles = service.fetch_news()
+                self.log_message(f"Found {len(articles)} articles. Dispatching SMS...")
 
-                news_response = requests.get(self.NEWS_ENDPOINT, params=news_params)
-                news_response.raise_for_status()
-                articles = news_response.json()["articles"]
-                three_articles = articles[: self.articles_limit.get()]
-
-                # Format articles (original logic)
-                formatted_articles = [
-                    f"{self.stock_name.get()}: {up_down}{difference_percent}% \nHeadline: {article['title']} \nBrief: {article['description']}"
-                    for article in three_articles
-                ]
-
-                # Send SMS messages (original logic)
-                self.log_message("Sending SMS notifications...")
-                client = Client(
-                    os.environ.get("TWILIO_ACCOUNT_SID"), os.environ.get("TWILIO_AUTH_TOKEN")
-                )
-
-                for i, article in enumerate(formatted_articles, 1):
-                    try:
-                        message = client.messages.create(
-                            body=article,
-                            from_=os.environ.get("TWILIO_PHONE_NUMBER"),
-                            to=os.environ.get("MY_PHONE_NUMBER"),
-                        )
-                        self.log_message(
-                            f"SMS {i} sent - ID: {message.sid}, Status: {message.status}"
-                        )
-                    except Exception as sms_error:
-                        self.log_message(f"Failed to send SMS {i}: {str(sms_error)}")
+                service.send_sms_alerts(articles, diff_percent, trend)
 
                 self.status_label.config(
-                    text=f"Alert sent! {len(formatted_articles)} SMS messages sent."
+                    text=f"Alert sent! {len(articles)} SMS messages dispatched."
                 )
-
+                self.log_message("Alert process complete.")
             else:
                 self.log_message(
-                    f"No alert needed - change {abs(difference_percent)}% is below threshold {self.threshold.get()}%"
+                    f"No alert needed - change is below {self.threshold.get()}%"
                 )
                 self.status_label.config(
-                    text=f"No alert needed - change below {self.threshold.get()}% threshold"
+                    text=f"No alert needed - change below threshold."
                 )
 
-        except requests.exceptions.RequestException as e:
-            error_msg = f"Network error: {str(e)}"
-            self.log_message(f"ERROR: {error_msg}")
-            self.status_label.config(text="Error occurred - check log")
-            messagebox.showerror("Network Error", error_msg)
-
-        except KeyError as e:
-            error_msg = f"Data format error: Missing key {str(e)}"
-            self.log_message(f"ERROR: {error_msg}")
-            self.status_label.config(text="Error occurred - check log")
+        except ValueError as e:
+            # Handles our custom API limit/error messages from the service
+            error_msg = str(e)
+            self.log_message(f"API/Data ERROR: {error_msg}")
+            self.status_label.config(text="Data error - check log")
             messagebox.showerror("Data Error", error_msg)
 
         except Exception as e:
+            # Catch-all for network issues or unexpected Twilio errors
             error_msg = f"Unexpected error: {str(e)}"
             self.log_message(f"ERROR: {error_msg}")
             self.status_label.config(text="Error occurred - check log")
@@ -278,6 +215,9 @@ class StockMonitorGUI:
 
 
 def main():
+    # Load environment variables FIRST
+    load_dotenv()
+
     # Check for required environment variables
     required_vars = [
         "STOCK_API_KEY",
@@ -291,7 +231,7 @@ def main():
 
     if missing_vars:
         root = tk.Tk()
-        root.withdraw()  # Hide main window
+        root.withdraw()
         messagebox.showerror(
             "Configuration Error",
             "Missing environment variables in .env file:\n"
@@ -299,7 +239,7 @@ def main():
         )
         return
 
-    # Configure output encoding for Chinese characters
+    # Configure output encoding for Chinese characters/Emojis
     sys.stdout.reconfigure(encoding="utf-8")
 
     root = tk.Tk()

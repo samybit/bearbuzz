@@ -1,76 +1,27 @@
-import os
 import sys
-
-import requests
-from twilio.rest import Client
 from dotenv import load_dotenv
+from stock_service import StockAlertService
 
-
-load_dotenv()
-
-# --- Environment Variables ---
-STOCK_API_KEY = os.environ.get("STOCK_API_KEY")
-NEWS_API_KEY = os.environ.get("NEWS_API_KEY")
-TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
-TWILIO_PHONE_NUMBER = os.environ.get("TWILIO_PHONE_NUMBER")
-MY_PHONE_NUMBER = os.environ.get("MY_PHONE_NUMBER")
-
-# --- Configuration ---
-STOCK_NAME = "TSLA"
-COMPANY_NAME = "Tesla Inc"
-STOCK_ENDPOINT = "https://www.alphavantage.co/query"
-NEWS_ENDPOINT = "https://newsapi.org/v2/everything"
-ARTICLES_LIMIT = 3
-
-# fixes output encoding chinese characters
+# Fixes output encoding for specific console environments
 sys.stdout.reconfigure(encoding="utf-8")
 
-# --- Core functionality ---
-stock_params = {
-    "function": "TIME_SERIES_DAILY",
-    "symbol": STOCK_NAME,
-    "apikey": STOCK_API_KEY,
-}
+def main():
+    load_dotenv()
+    
+    # Configuration
+    STOCK_NAME = "TSLA"
+    COMPANY_NAME = "Tesla Inc"
+    THRESHOLD = 5.0
 
-news_params = {
-    "apiKey": NEWS_API_KEY,
-    "q": COMPANY_NAME,
-}
+    print(f"Starting stock monitor for {COMPANY_NAME} ({STOCK_NAME})...")
+    
+    service = StockAlertService(
+        stock_symbol=STOCK_NAME, 
+        company_name=COMPANY_NAME, 
+        threshold=THRESHOLD
+    )
+    
+    service.run_monitor()
 
-response = requests.get(STOCK_ENDPOINT, params=stock_params)
-response.raise_for_status()
-data = response.json()["Time Series (Daily)"]
-data_list = [value for (key, value) in data.items()]
-
-yesterday_data = data_list[0]
-yesterday_closing_price = yesterday_data["4. close"]
-
-day_before_yesterday_data = data_list[1]
-day_before_yesterday_closing_price = day_before_yesterday_data["4. close"]
-
-difference = float(yesterday_closing_price) - float(day_before_yesterday_closing_price)
-up_down = "🔺" if difference > 0 else "🔻"
-
-difference_percent = round((difference / float(yesterday_closing_price)) * 100, 2)
-
-if abs(difference_percent) > 5:
-    news_response = requests.get(NEWS_ENDPOINT, params=news_params)
-    news_response.raise_for_status()
-    articles = news_response.json()["articles"]
-    three_articles = articles[:ARTICLES_LIMIT]
-
-    formatted_articles = [
-        f"{STOCK_NAME}: {up_down}{difference_percent}% \nHeadline: {article['title']} \nBrief: {article['description']}"
-        for article in three_articles
-    ]
-
-    client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-    for article in formatted_articles:
-        message = client.messages.create(
-            body=article,
-            from_=TWILIO_PHONE_NUMBER,
-            to=MY_PHONE_NUMBER,
-        )
-        print(message.sid)
-        print(message.status)
+if __name__ == "__main__":
+    main()
