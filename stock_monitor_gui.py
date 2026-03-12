@@ -193,7 +193,7 @@ class StockMonitorGUI:
                     f"No alert needed - change is below {self.threshold.get()}%"
                 )
                 self.status_label.config(
-                    text=f"No alert needed - change below threshold."
+                    text="No alert needed - change below threshold."
                 )
 
         except ValueError as e:
