@@ -24,7 +24,7 @@ It features both a lightweight Command Line Interface (CLI) and a fully featured
 ```env
 STOCK_API_KEY=your_alphavantage_key
 NEWS_API_KEY=your_newsapi_key
-TWILIO_SID=your_twilio_account_sid
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 MY_PHONE_NUMBER=the_number_to_receive_alerts
