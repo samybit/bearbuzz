@@ -1,6 +1,6 @@
 import os
 import requests
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
