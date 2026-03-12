@@ -5,16 +5,19 @@ from tkinter import ttk, scrolledtext, messagebox
 import threading
 from dotenv import load_dotenv
 
-# Import our new business logic service
+# Import business logic service
 from stock_service import StockAlertService
 
 
 class StockMonitorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("BuzzBear")
-        self.root.geometry("600x700")
+        self.root.title("BuzzBear | Enterprise Monitor")
+        self.root.geometry("650x750")
         self.root.resizable(True, True)
+
+        # Apply Corporate UI/UX Theme
+        self.apply_corporate_theme()
 
         # Configuration variables
         self.stock_name = tk.StringVar(value="TSLA")
@@ -24,114 +27,243 @@ class StockMonitorGUI:
 
         self.setup_ui()
 
-    def setup_ui(self):
-        # Main frame
-        main_frame = ttk.Frame(self.root, padding="10")
-        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
+    def apply_corporate_theme(self):
+        """Sets up a flat, modern corporate color palette and typography."""
+        self.style = ttk.Style(self.root)
+        # 'clam' theme allows for flat, modern styling across all OS platforms
+        self.style.theme_use("clam")
 
-        # Configure grid weights
+        # Enterprise Color Palette
+        self.colors = {
+            "bg": "#F4F5F7",  # Light gray background
+            "surface": "#FFFFFF",  # Clean white panels
+            "primary": "#0052CC",  # Trustworthy Corporate Blue
+            "primary_hover": "#0747A6",  # Darker blue for interactions
+            "text_main": "#172B4D",  # Deep slate for primary text
+            "text_muted": "#6B778C",  # Lighter gray for secondary text
+            "border": "#DFE1E6",  # Subtle borders
+            "success": "#00875A",  # Profit green
+            "danger": "#DE350B",  # Loss red
+        }
+
+        self.root.configure(bg=self.colors["bg"])
+        default_font = ("Segoe UI", 10)
+
+        # Base Frame Styling
+        self.style.configure("TFrame", background=self.colors["bg"])
+
+        # Label Styling
+        self.style.configure(
+            "TLabel",
+            background=self.colors["bg"],
+            foreground=self.colors["text_main"],
+            font=default_font,
+        )
+        self.style.configure(
+            "Header.TLabel",
+            font=("Segoe UI", 18, "bold"),
+            foreground=self.colors["text_main"],
+        )
+        self.style.configure(
+            "Subheader.TLabel",
+            font=("Segoe UI", 10),
+            foreground=self.colors["text_muted"],
+        )
+        self.style.configure(
+            "Surface.TLabel",
+            background=self.colors["surface"],
+            foreground=self.colors["text_main"],
+            font=default_font,
+        )
+
+        # LabelFrame (Dashboard Cards)
+        self.style.configure(
+            "TLabelframe",
+            background=self.colors["surface"],
+            bordercolor=self.colors["border"],
+            borderwidth=1,
+        )
+        self.style.configure(
+            "TLabelframe.Label",
+            background=self.colors["surface"],
+            foreground=self.colors["primary"],
+            font=("Segoe UI", 10, "bold"),
+        )
+
+        # Primary Action Button
+        self.style.configure(
+            "Primary.TButton",
+            font=("Segoe UI", 10, "bold"),
+            background=self.colors["primary"],
+            foreground="white",
+            borderwidth=0,
+            padding=6,
+        )
+        self.style.map(
+            "Primary.TButton", background=[("active", self.colors["primary_hover"])]
+        )
+
+        # Secondary Action Button
+        self.style.configure(
+            "Secondary.TButton",
+            font=("Segoe UI", 10),
+            background=self.colors["bg"],
+            foreground=self.colors["text_main"],
+            bordercolor=self.colors["border"],
+            borderwidth=1,
+            padding=6,
+        )
+        self.style.map(
+            "Secondary.TButton", background=[("active", self.colors["border"])]
+        )
+
+        # Inputs
+        self.style.configure(
+            "TEntry",
+            fieldbackground=self.colors["surface"],
+            bordercolor=self.colors["border"],
+            padding=4,
+        )
+        self.style.configure(
+            "TSpinbox",
+            fieldbackground=self.colors["surface"],
+            bordercolor=self.colors["border"],
+            padding=4,
+        )
+
+    def setup_ui(self):
+        # Main Container with extra padding for whitespace
+        main_frame = ttk.Frame(self.root, padding="20")
+        main_frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
         main_frame.columnconfigure(1, weight=1)
 
-        # Title
-        title_label = ttk.Label(
-            main_frame, text="Stock Price Monitor", font=("Arial", 16, "bold")
+        # Header Section
+        header_frame = ttk.Frame(main_frame)
+        header_frame.grid(row=0, column=0, columnspan=3, sticky=tk.W, pady=(0, 20))
+        ttk.Label(header_frame, text="BuzzBear", style="Header.TLabel").pack(
+            anchor=tk.W
         )
-        title_label.grid(row=0, column=0, columnspan=3, pady=(0, 20))
+        ttk.Label(
+            header_frame,
+            text="Automated Market Intelligence & Alerting",
+            style="Subheader.TLabel",
+        ).pack(anchor=tk.W)
 
-        # Configuration section
-        config_frame = ttk.LabelFrame(main_frame, text="Configuration", padding="10")
+        # Configuration Card
+        config_frame = ttk.LabelFrame(
+            main_frame, text=" Monitor Configuration ", padding="15"
+        )
         config_frame.grid(
-            row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10)
+            row=1, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15)
         )
         config_frame.columnconfigure(1, weight=1)
+        config_frame.columnconfigure(3, weight=1)
 
-        # Stock symbol
-        ttk.Label(config_frame, text="Stock Symbol:").grid(
-            row=0, column=0, sticky=tk.W, padx=(0, 5)
+        # Row 1 Inputs
+        ttk.Label(config_frame, text="Ticker Symbol:", style="Surface.TLabel").grid(
+            row=0, column=0, sticky=tk.W, padx=(0, 10)
         )
         stock_entry = ttk.Entry(config_frame, textvariable=self.stock_name, width=15)
-        stock_entry.grid(row=0, column=1, sticky=(tk.W, tk.E), padx=(0, 10))
+        stock_entry.grid(row=0, column=1, sticky=tk.W, padx=(0, 20), pady=(0, 10))
 
-        # Company name
-        ttk.Label(config_frame, text="Company Name:").grid(
-            row=0, column=2, sticky=tk.W, padx=(10, 5)
+        ttk.Label(config_frame, text="Entity Name:", style="Surface.TLabel").grid(
+            row=0, column=2, sticky=tk.W, padx=(0, 10)
         )
         company_entry = ttk.Entry(
-            config_frame, textvariable=self.company_name, width=20
+            config_frame, textvariable=self.company_name, width=25
         )
-        company_entry.grid(row=0, column=3, sticky=(tk.W, tk.E))
+        company_entry.grid(row=0, column=3, sticky=(tk.W, tk.E), pady=(0, 10))
 
-        # Threshold
-        ttk.Label(config_frame, text="Alert Threshold (%):").grid(
-            row=1, column=0, sticky=tk.W, padx=(0, 5), pady=(10, 0)
-        )
-        threshold_entry = ttk.Entry(config_frame, textvariable=self.threshold, width=10)
-        threshold_entry.grid(row=1, column=1, sticky=tk.W, pady=(10, 0))
+        # Row 2 Inputs
+        ttk.Label(
+            config_frame, text="Variance Threshold (%):", style="Surface.TLabel"
+        ).grid(row=1, column=0, sticky=tk.W, padx=(0, 10))
+        threshold_entry = ttk.Entry(config_frame, textvariable=self.threshold, width=15)
+        threshold_entry.grid(row=1, column=1, sticky=tk.W, padx=(0, 20))
 
-        # Articles limit
-        ttk.Label(config_frame, text="Max Articles:").grid(
-            row=1, column=2, sticky=tk.W, padx=(10, 5), pady=(10, 0)
-        )
+        ttk.Label(
+            config_frame, text="News Article Limit:", style="Surface.TLabel"
+        ).grid(row=1, column=2, sticky=tk.W, padx=(0, 10))
         articles_spin = ttk.Spinbox(
-            config_frame, from_=1, to=10, textvariable=self.articles_limit, width=5
+            config_frame, from_=1, to=10, textvariable=self.articles_limit, width=8
         )
-        articles_spin.grid(row=1, column=3, sticky=tk.W, pady=(10, 0))
+        articles_spin.grid(row=1, column=3, sticky=tk.W)
 
-        # Control buttons
+        # Control Panel
         button_frame = ttk.Frame(main_frame)
-        button_frame.grid(row=2, column=0, columnspan=3, pady=10)
+        button_frame.grid(row=2, column=0, columnspan=3, pady=(5, 15), sticky=tk.W)
 
         self.check_button = ttk.Button(
-            button_frame, text="Check Stock Price", command=self.start_check_thread
+            button_frame,
+            text="Execute Market Check",
+            style="Primary.TButton",
+            command=self.start_check_thread,
         )
         self.check_button.pack(side=tk.LEFT, padx=(0, 10))
 
         self.clear_button = ttk.Button(
-            button_frame, text="Clear Log", command=self.clear_log
+            button_frame,
+            text="Clear System Log",
+            style="Secondary.TButton",
+            command=self.clear_log,
         )
         self.clear_button.pack(side=tk.LEFT)
 
-        # Status section
-        status_frame = ttk.LabelFrame(main_frame, text="Current Status", padding="10")
+        # Status & Telemetry Card
+        status_frame = ttk.LabelFrame(main_frame, text=" Live Telemetry ", padding="15")
         status_frame.grid(
-            row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 10)
+            row=3, column=0, columnspan=3, sticky=(tk.W, tk.E), pady=(0, 15)
         )
         status_frame.columnconfigure(1, weight=1)
 
         self.status_label = ttk.Label(
-            status_frame, text="Ready to check stock price", font=("Arial", 10)
+            status_frame,
+            text="System idle. Awaiting execution command.",
+            style="Surface.TLabel",
         )
         self.status_label.grid(row=0, column=0, columnspan=2, sticky=tk.W)
 
-        # Price info frame
-        self.price_frame = ttk.Frame(status_frame)
+        self.price_frame = ttk.Frame(status_frame, style="Surface.TFrame")
         self.price_frame.grid(
             row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(10, 0)
         )
 
         self.price_info = ttk.Label(
-            self.price_frame, text="", font=("Arial", 12, "bold")
+            self.price_frame,
+            text="",
+            style="Surface.TLabel",
+            font=("Segoe UI", 16, "bold"),
         )
-        self.price_info.pack()
+        self.price_info.pack(anchor=tk.W)
 
-        # Log section
-        log_frame = ttk.LabelFrame(main_frame, text="Activity Log", padding="10")
-        log_frame.grid(
-            row=4, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10)
-        )
+        # System Log Card
+        log_frame = ttk.LabelFrame(main_frame, text=" Execution Log ", padding="15")
+        log_frame.grid(row=4, column=0, columnspan=3, sticky=(tk.W, tk.E, tk.N, tk.S))
         log_frame.columnconfigure(0, weight=1)
         log_frame.rowconfigure(0, weight=1)
         main_frame.rowconfigure(4, weight=1)
 
-        self.log_text = scrolledtext.ScrolledText(log_frame, height=15, wrap=tk.WORD)
+        # Style the ScrolledText to match the flat corporate look
+        self.log_text = scrolledtext.ScrolledText(
+            log_frame,
+            height=12,
+            wrap=tk.WORD,
+            bg=self.colors["surface"],
+            fg=self.colors["text_main"],
+            font=("Consolas", 9),
+            relief=tk.FLAT,
+            borderwidth=1,
+            highlightthickness=1,
+            highlightbackground=self.colors["border"],
+            highlightcolor=self.colors["primary"],
+        )
         self.log_text.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
     def log_message(self, message):
         """Add a timestamped message to the log"""
-        # We import datetime locally here to keep the global namespace clean if desired,
-        # or you can add `from datetime import datetime` to the top.
+        # Import datetime locally here to keep the global namespace clean
         from datetime import datetime
 
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -144,7 +276,7 @@ class StockMonitorGUI:
         self.log_text.delete(1.0, tk.END)
 
     def start_check_thread(self):
-        """Start the stock check in a separate thread to prevent GUI freezing"""
+        """Start the stock check in a separate thread"""
         self.check_button.config(state="disabled")
         thread = threading.Thread(target=self.check_stock_price, daemon=True)
         thread.start()
@@ -152,10 +284,13 @@ class StockMonitorGUI:
     def check_stock_price(self):
         """Delegates business logic to the StockAlertService"""
         try:
-            self.status_label.config(text="Checking stock price...")
-            self.log_message(f"Starting stock check for {self.stock_name.get()}")
+            self.status_label.config(
+                text="Status: Connecting to financial data APIs..."
+            )
+            self.log_message(
+                f"Initiating market check for ticker: {self.stock_name.get()}"
+            )
 
-            # Initialize the service with current GUI values
             service = StockAlertService(
                 stock_symbol=self.stock_name.get(),
                 company_name=self.company_name.get(),
@@ -163,59 +298,65 @@ class StockMonitorGUI:
                 articles_limit=self.articles_limit.get(),
             )
 
-            # 1. Fetch Price Data
-            self.log_message("Fetching stock data from Alpha Vantage...")
+            self.log_message("Querying Alpha Vantage endpoint...")
             diff_percent, trend, current_price = service.check_price_change()
 
-            # Update GUI Price Display
-            price_text = f"{self.stock_name.get()}: {trend} {abs(diff_percent)}% (${current_price})"
-            self.price_info.config(text=price_text)
-            self.log_message(f"Price change: {trend} {abs(diff_percent)}%")
+            # Dynamic Corporate Coloring for the Price Trend
+            trend_color = (
+                self.colors["success"] if diff_percent > 0 else self.colors["danger"]
+            )
+            price_text = f"{self.stock_name.get()} {trend} {abs(diff_percent)}% (Closing: ${current_price})"
+            self.price_info.config(text=price_text, foreground=trend_color)
 
-            # 2. Check Threshold & Process Alerts
+            self.log_message(f"Calculated variance: {trend} {abs(diff_percent)}%")
+
             if abs(diff_percent) > self.threshold.get():
                 self.log_message(
-                    f"Threshold of {self.threshold.get()}% exceeded! Getting news articles..."
+                    f"Variance exceeds {self.threshold.get()}% threshold. Fetching market context..."
                 )
-                self.status_label.config(text="Threshold exceeded - fetching news...")
+                self.status_label.config(
+                    text="Status: Threshold breached. Aggregating news articles..."
+                )
 
                 articles = service.fetch_news()
-                self.log_message(f"Found {len(articles)} articles. Dispatching SMS...")
+                self.log_message(
+                    f"Sourced {len(articles)} relevant articles. Dispatching payload via Twilio..."
+                )
 
                 service.send_sms_alerts(articles, diff_percent, trend)
 
                 self.status_label.config(
-                    text=f"Alert sent! {len(articles)} SMS messages dispatched."
+                    text=f"Status: Alert dispatched successfully. ({len(articles)} messages)"
                 )
-                self.log_message("Alert process complete.")
+                self.log_message("Execution cycle complete.")
             else:
                 self.log_message(
-                    f"No alert needed - change is below {self.threshold.get()}%"
+                    f"Variance within acceptable parameters (<{self.threshold.get()}%)."
                 )
                 self.status_label.config(
-                    text="No alert needed - change below threshold."
+                    text="Status: Variance nominal. No alerts dispatched."
                 )
 
         except ValueError as e:
             # Handles our custom API limit/error messages from the service
             error_msg = str(e)
-            self.log_message(f"API/Data ERROR: {error_msg}")
-            self.status_label.config(text="Data error - check log")
-            messagebox.showerror("Data Error", error_msg)
+            self.log_message(f"CRITICAL DATA FAULT: {error_msg}")
+            self.status_label.config(text="Status: Data retrieval failed. See log.")
+            messagebox.showerror("Data Fault", error_msg)
 
         except Exception as e:
             # Catch-all for network issues or unexpected Twilio errors
-            error_msg = f"Unexpected error: {str(e)}"
-            self.log_message(f"ERROR: {error_msg}")
-            self.status_label.config(text="Error occurred - check log")
-            messagebox.showerror("Error", error_msg)
+            error_msg = f"Unhandled exception: {str(e)}"
+            self.log_message(f"SYSTEM ERROR: {error_msg}")
+            self.status_label.config(text="Status: System failure. See log.")
+            messagebox.showerror("System Error", error_msg)
 
         finally:
             self.check_button.config(state="normal")
 
 
 def main():
-    # Load environment variables FIRST
+    # Load environment variables
     load_dotenv()
 
     # Check for required environment variables
@@ -233,8 +374,8 @@ def main():
         root = tk.Tk()
         root.withdraw()
         messagebox.showerror(
-            "Configuration Error",
-            "Missing environment variables in .env file:\n"
+            "Environment Configuration Fault",
+            "Missing parameters in .env file:\n"
             + "\n".join(f"• {var}" for var in missing_vars),
         )
         return
