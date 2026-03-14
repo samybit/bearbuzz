@@ -12,7 +12,7 @@ from stock_service import StockAlertService
 class StockMonitorGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("BuzzBear | Enterprise Monitor")
+        self.root.title("BearBuzz | Enterprise Monitor")
         self.root.geometry("650x750")
         self.root.resizable(True, True)
 
